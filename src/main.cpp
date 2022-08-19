@@ -2,7 +2,8 @@
 
 // configs
 const int PUMPING_DETECT_DELAY = 100;
-const int DETECT_DELAY = 1 * 1000;
+const int BACKUP_DETECT_DELAY = 100;
+const int TANK_DETECT_DELAY = 5 * 1000;
 const int TARGET_BLEED = 20 * 1000;
 
 // pins
@@ -17,6 +18,7 @@ const int SENSOR_TANK_PIN = 12;
 bool IS_PUMPING = false;
 bool IS_BLEEDING = false;
 int REMAIN_BLEED = 0;
+int REMAIN_TANK_DETECT_DELAY = 0;
 
 void setup()
 {
@@ -32,7 +34,7 @@ void setup()
   pinMode(SENSOR_TANK_PIN, INPUT);
   pinMode(SENSOR_BACKUP_PIN, INPUT);
 
-  // Serial.begin(9600); // debug
+  Serial.begin(9600); // debug
 }
 
 void loop()
@@ -91,30 +93,34 @@ void loop()
     return; // continue pumping
   }
 
-  delay(DETECT_DELAY);
+  // Serial.println("-----------------------------");
 
-  Serial.println("-----------------------------");
+  // Serial.print("tank_water: ");
+  // Serial.println(tank_water);
+  // Serial.print("backup_water: ");
+  // Serial.println(backup_water);
 
-  Serial.print("tank_water: ");
-  Serial.println(tank_water);
-  Serial.print("backup_water: ");
-  Serial.println(backup_water);
+  delay(BACKUP_DETECT_DELAY);
 
+  // pause tank detect, until backup_water is true
   if (!backup_water)
   {
     digitalWrite(LOW_WATER_LEVEL_LED_PIN, HIGH);
     return;
-  }
-  else
-  {
+  } else {
     digitalWrite(LOW_WATER_LEVEL_LED_PIN, LOW);
+    REMAIN_TANK_DETECT_DELAY -= BACKUP_DETECT_DELAY;
   }
 
-  if (!tank_water)
+  if (REMAIN_TANK_DETECT_DELAY <= 0)
   {
-    Serial.println("start pumping");
-    analogWrite(PUMP_LED_PIN, 255);
-    digitalWrite(PUMP_PIN, HIGH);
-    IS_PUMPING = true;
+    REMAIN_TANK_DETECT_DELAY = TANK_DETECT_DELAY; // reset
+    if (!tank_water)
+    {
+      Serial.println("start pumping");
+      analogWrite(PUMP_LED_PIN, 255);
+      digitalWrite(PUMP_PIN, HIGH);
+      IS_PUMPING = true;
+    }
   }
 }
